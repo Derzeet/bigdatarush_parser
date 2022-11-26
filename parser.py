@@ -1,6 +1,4 @@
 import requests
-import csv
-import time
 import psycopg2
 import psql_config
 from urllib.request import urlopen
@@ -15,7 +13,6 @@ class Product:
         self.price = price
         self.category = category
         self.origin = origin
-
 class DataBase:
     conn = None
     cur = None
@@ -68,15 +65,18 @@ db = DataBase()
 db.getConnection()
 
 def get_data(product_link):
-    product = dict()
     page = urlopen(product_link)
     html_bytes = page.read()
     file = BeautifulSoup(html_bytes, "lxml")
     all_names = file.find_all("p",
                               class_="Typography ProductCardV__Title --loading Typography__Body Typography__Body_Bold")
+    # Takes all p tags with class name "Typography ProductCardV__Title --loading Typography__Body Typography__Body_Bold" into and array
     all_prices = file.find_all("p",
                                class_="Typography ProductCardV__Price ProductCardV__Price_WithOld Typography__Subtitle")
+    # Takes all prices into an array
 
+
+    #Iterates through this array and formats name and price of each product
     for i in range(len(all_names)):
         try:
             words = all_names[i].text.split()[1:]
@@ -87,11 +87,11 @@ def get_data(product_link):
             name = ' '.join(words[:s])
             a = all_prices[i].text.replace('₸', '')
             b = int(''.join(a.split()))
+            #Creates a product with this properties and then adds product to local postgres Database
             product = Product(name, Decimal(b), "Smartphones", "Technodom")
             db.insertRecord(product)
         except:
             pass
-    # return product
 
 def get_gadgets(product_link):
     page = urlopen(product_link)
@@ -118,29 +118,21 @@ def get_gadgets(product_link):
 def get_links(page_url):
     request = requests.get(page_url)
     tree = html.fromstring(request.content)
+    #Takes all available pages from main page
     pages_count = tree.xpath('//div[@class="Paginator__List"]//p[last()]/text()')
     print('Pages: ', pages_count)
 
     get_data(URL)
     for url in range(2, len(pages_count)):
+        #goes through all taken pages and parse this pages
         full_url = f"{URL}?page={url}"
         print(full_url)
         get_data(full_url)
-    #     pagination_pages.add(full_url)
-    #
-    # while len(pagination_pages) != 0:
-    #     current_url = pagination_pages.pop()
-    #     get_data(current_url)
 
 
 def main():
 
     get_links(URL)
-
-    # while len(QUEUE_URL) != 0:
-    #     current_url = QUEUE_URL.pop()
-    #     get_data(current_url)
-
 
 if __name__ == "__main__":
     main()
